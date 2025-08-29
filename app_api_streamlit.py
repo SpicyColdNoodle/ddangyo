@@ -359,6 +359,12 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         right: 16px;                           /* [조정] 입력창 오른쪽 여백 */
         z-index: 1001;                         /* [조정] 입력창 레이어 순서 (상태 바보다 위) */
       }}
+            
+      /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
+      .block-container {{
+        padding-bottom: 120px !important;      /* [조정] 메시지 영역 하단 여백 (입력창 높이 + 여유) */
+      }}
+
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
@@ -584,3 +590,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
