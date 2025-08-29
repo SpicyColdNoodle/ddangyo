@@ -162,19 +162,31 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
 
       /* ===== 상태 바 영역 ===== */
       .status-bar {{
+        position: fixed;                       /* [조정] 상태 바 고정 위치 */
+        bottom: 0;                             /* [조정] 상태 바 최하단 위치 */
+        left: 0;                               /* [조정] 상태 바 전체 너비 */
+        right: 0;                              /* [조정] 상태 바 전체 너비 */
         background: #FFFFFF;                    /* [조정] 상태 바 배경색 */
-        border-bottom: 1px solid #e6e8f0;      /* [조정] 상태 바 하단 테두리 */
-        padding: 8px 12px;                     /* [조정] 상태 바 내부 여백 (위아래/좌우) */
+        border-top: 1px solid #e6e8f0;         /* [조정] 상태 바 상단 테두리 */
+        padding: 8px 16px;                     /* [조정] 상태 바 내부 여백 (위아래/좌우) */
         font-size: 12px;                       /* [조정] 상태 바 기본 글자 크기 */
         color: #6b7280;                        /* [조정] 상태 바 기본 글자색 */
         display: flex;
         justify-content: space-between;
         align-items: center;
+        z-index: 1000;                         /* [조정] 상태 바 레이어 순서 */
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.1); /* [조정] 상태 바 그림자 (위쪽) */
+        height: 50px;                          /* [조정] 상태 바 고정 높이 */
+        overflow: hidden;                      /* [조정] 내용이 넘치면 숨김 */
       }}
       .status-item {{
         display: flex;
         align-items: center;
         gap: 4px;                              /* [조정] 상태 항목 내부 간격 */
+        white-space: nowrap;                   /* [조정] 텍스트 줄바꿈 방지 */
+        overflow: hidden;                      /* [조정] 넘치는 내용 숨김 */
+        text-overflow: ellipsis;               /* [조정] 넘치는 텍스트 ... 표시 */
+        max-width: 25%;                        /* [조정] 각 항목 최대 너비 */
       }}
       .status-badge {{
         padding: 2px 6px;                      /* [조정] 상태 배지 내부 여백 (위아래/좌우) */
@@ -342,10 +354,10 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
       /* ===== 입력창 고정 ===== */
       [data-testid="stChatInput"] {{
         position: fixed; 
-        bottom: 8px;                           /* [조정] 입력창 하단 여백 */
+        bottom: 60px;                          /* [조정] 입력창 하단 여백 (상태 바 높이 50px + 여백 10px) */
         left: 16px;                            /* [조정] 입력창 왼쪽 여백 */
         right: 16px;                           /* [조정] 입력창 오른쪽 여백 */
-        z-index: 1000;
+        z-index: 1001;                         /* [조정] 입력창 레이어 순서 (상태 바보다 위) */
       }}
     </style>
     """
@@ -451,30 +463,37 @@ def _convert_links_to_buttons(text: str) -> str:
 def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str) -> None:
     """대화 메시지 목록을 렌더링합니다."""
     
-    # 각 메시지를 개별적으로 렌더링 (더 안전한 방법)
-    for msg in messages:
+    # 간격 조정 변수
+    message_gap = 10  # [조정] 메시지 간 간격 (px)
+    
+    # 간단한 방식으로 메시지 렌더링
+    for i, msg in enumerate(messages):
         role = msg.get("role", "assistant")
         content = msg.get("content", "")
         
+        # 마지막 메시지인지 확인
+        is_last = (i == len(messages) - 1)
+        margin_bottom = "0px" if is_last else f"{message_gap}px"
+        
         if role == "user":
-            # 사용자 메시지
+            # 사용자 메시지 - 직접 스타일 적용
             st.markdown(
                 f"""
-                <div class="msg-row user">
-                  <div class="bubble bubble-user">{html_lib.escape(content)}</div>
-                  <img class="avatar" src="{user_uri}" alt="me" />
+                <div style="display: flex; justify-content: flex-end; align-items: flex-start; gap: 8px; margin-bottom: {margin_bottom};">
+                  <div style="background-color: #FF7A00; color: white; padding: 12px 16px; border-radius: 16px; max-width: 70%; word-wrap: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">{html_lib.escape(content)}</div>
+                  <img src="{user_uri}" alt="me" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
         else:
-            # 봇 메시지
+            # 봇 메시지 - 직접 스타일 적용
             content_html = _convert_links_to_buttons(content)
             st.markdown(
                 f"""
-                <div class="msg-row bot">
-                  <img class="avatar" src="{bot_uri}" alt="bot" />
-                  <div class="bubble bubble-bot">{content_html}</div>
+                <div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-bottom: {margin_bottom};">
+                  <img src="{bot_uri}" alt="bot" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+                  <div style="background-color: white; color: #111827; padding: 12px 16px; border-radius: 16px; max-width: 70%; word-wrap: break-word; border: 1px solid #e6e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">{content_html}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -528,14 +547,16 @@ def main() -> None:
     # UI 렌더링
     render_global_css(logo_uri, user_uri, bot_uri)
     render_header(logo_uri)
+    render_header_buttons()
+    render_messages(st.session_state["messages"], user_uri, bot_uri)
+    
+    # 상태 바를 메시지 영역 아래, 입력창 위에 표시
     render_status_bar(
         st.session_state["user_id"], 
         st.session_state["session_id"],
         st.session_state["last_guardrail"],
         st.session_state["last_intent"]
     )
-    render_header_buttons()
-    render_messages(st.session_state["messages"], user_uri, bot_uri)
 
     # 사용자 입력 처리
     user_text = st.chat_input("메시지를 입력하세요")
