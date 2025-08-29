@@ -83,27 +83,35 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
         }
 
 
+def render_loading_skeleton(bot_uri: str) -> None:
+    """답변 대기 중 로딩 스켈레톤을 렌더링합니다."""
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-top: 20px; margin-bottom: 10px;">
+          <img src="{bot_uri}" alt="bot" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+          <div style="background-color: white; border: 1px solid #e6e8f0; border-radius: 16px; padding: 12px 16px; min-width: 200px; max-width: 70%;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span style="color: #6b7280; font-size: 14px;">답변을 생성하고 있습니다...</span>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
-    """앱 전역 CSS를 삽입합니다.
-    
-    주요 조정 포인트:
-    - 전체 배경색: `background: #f5f6f8`
-    - 헤더 스타일: `.app-header` 내 background, padding, margin, border-radius
-    - 로고 크기: `.header-logo`의 width, max-width
-    - 제목 스타일: `.header-title`의 color, font-size, font-weight
-    - 상태 바: `.status-bar`의 background, padding, font-size
-    - 버튼 바 레이아웃: `.button-bar`의 gap, max-width
-    - 버튼 스타일: `.button-pill`의 height, padding, border, background, color
-    - 말풍선 간격: `.chat-container`의 gap (현재 12px)
-    - 말풍선 스타일: `.bubble-user`, `.bubble-bot`의 색상과 여백
-    - 아바타 크기: `.avatar`의 width/height (현재 48px)
-    - 입력창 위치: `[data-testid="stChatInput"]`의 bottom, left, right
-    """
+    """앱 전역 CSS를 삽입합니다."""
     css = f"""
     <style>
       /* ===== 전체 배경 및 레이아웃 ===== */
       html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-        background: #f5f6f8 !important;  /* [조정] 전체 배경색 */
+        background: #f5f6f8 !important;
       }}
       html, body {{ margin: 0 !important; padding: 0 !important; }}
       [data-testid="stAppViewContainer"] > .main {{ padding-top: 0 !important; }}
@@ -119,66 +127,66 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         position: sticky;
         top: 0;
         z-index: 1000;
-        background: #FB521C;                    /* [조정] 헤더 배경색 */
-        border-bottom-left-radius: 12px;        /* [조정] 헤더 하단 왼쪽 둥근 모서리 */
-        border-bottom-right-radius: 12px;       /* [조정] 헤더 하단 오른쪽 둥근 모서리 */
-        padding: 14px 12px 16px 12px;          /* [조정] 헤더 내부 여백 (위/우/아래/좌) */
-        margin: -16px -16px 4px -16px;         /* [조정] 헤더 외부 여백 (위/우/아래/좌) */
+        background: #FB521C;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        padding: 14px 12px 16px 12px;
+        margin: -16px -16px 4px -16px;
       }}
       .app-header-inner {{
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;                              /* [조정] 헤더 내부 요소 간 간격 */
+        gap: 8px;
       }}
       .header-logo {{
-        width: 200px;                          /* [조정] 로고 기본 폭 */
-        max-width: 60vw;                       /* [조정] 로고 최대 폭 (뷰포트 대비) */
+        width: 200px;
+        max-width: 60vw;
         height: auto;
         display: block;
       }}
       .header-title {{
-        color: #FFFFFF;                        /* [조정] 헤더 제목 글자색 */
-        font-weight: 700;                      /* [조정] 헤더 제목 글자 굵기 */
-        font-size: 18px;                       /* [조정] 헤더 제목 글자 크기 */
-        line-height: 1.2;                      /* [조정] 헤더 제목 줄 간격 */
+        color: #FFFFFF;
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.2;
         text-align: center;
       }}
 
       /* ===== 상태 바 영역 ===== */
       .status-bar {{
-        position: fixed;                       /* [조정] 상태 바 고정 위치 */
-        bottom: 0;                             /* [조정] 상태 바 최하단 위치 */
-        left: 0;                               /* [조정] 상태 바 전체 너비 */
-        right: 0;                              /* [조정] 상태 바 전체 너비 */
-        background: #FFFFFF;                    /* [조정] 상태 바 배경색 */
-        border-top: 1px solid #e6e8f0;         /* [조정] 상태 바 상단 테두리 */
-        padding: 8px 16px;                     /* [조정] 상태 바 내부 여백 (위아래/좌우) */
-        font-size: 12px;                       /* [조정] 상태 바 기본 글자 크기 */
-        color: #6b7280;                        /* [조정] 상태 바 기본 글자색 */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #FFFFFF;
+        border-top: 1px solid #e6e8f0;
+        padding: 8px 16px;
+        font-size: 12px;
+        color: #6b7280;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        z-index: 1000;                         /* [조정] 상태 바 레이어 순서 */
-        box-shadow: 0 -2px 8px rgba(0,0,0,0.1); /* [조정] 상태 바 그림자 (위쪽) */
-        height: 50px;                          /* [조정] 상태 바 고정 높이 */
-        overflow: hidden;                      /* [조정] 내용이 넘치면 숨김 */
+        z-index: 1000;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        height: 50px;
+        overflow: hidden;
       }}
       .status-item {{
         display: flex;
         align-items: center;
-        gap: 4px;                              /* [조정] 상태 항목 내부 간격 */
-        white-space: nowrap;                   /* [조정] 텍스트 줄바꿈 방지 */
-        overflow: hidden;                      /* [조정] 넘치는 내용 숨김 */
-        text-overflow: ellipsis;               /* [조정] 넘치는 텍스트 ... 표시 */
-        max-width: 25%;                        /* [조정] 각 항목 최대 너비 */
+        gap: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 25%;
       }}
       .status-badge {{
-        padding: 2px 6px;                      /* [조정] 상태 배지 내부 여백 (위아래/좌우) */
-        border-radius: 4px;                    /* [조정] 상태 배지 둥근 모서리 */
-        font-size: 10px;                       /* [조정] 상태 배지 글자 크기 */
-        font-weight: 600;                      /* [조정] 상태 배지 글자 굵기 */
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
       }}
       .status-pass {{
         background: #dcfce7;
@@ -199,17 +207,17 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
 
       /* ===== 버튼 바 영역 ===== */
       .button-bar-wrapper {{
-        margin: 8px -16px 8px -16px;          /* [조정] 버튼 바 외부 여백 (위/우/아래/좌) */
-        padding: 0 12px;                       /* [조정] 버튼 바 내부 여백 (좌우) */
+        margin: 8px -16px 8px -16px;
+        padding: 0 12px;
       }}
       .button-bar {{
         display: flex;
         flex-direction: row;
         align-items: stretch;
         justify-content: center;
-        gap: 8px;                              /* [조정] 버튼 간 간격 */
+        gap: 8px;
         width: 100%;
-        max-width: 412px;                      /* [조정] 버튼 바 최대 폭 (모바일 기준) */
+        max-width: 412px;
         margin: 0 auto;
       }}
       .button-pill {{
@@ -217,16 +225,16 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        height: 36px;                          /* [조정] 버튼 높이 */
-        padding: 0 10px;                       /* [조정] 버튼 내부 여백 (좌우) */
-        border-radius: 999px;                  /* [조정] 버튼 둥근 모서리 */
-        border: 1px solid #D1D5DB;            /* [조정] 버튼 테두리 색상 */
-        background: #FFFFFF;                   /* [조정] 버튼 배경색 */
-        color: #111827;                        /* [조정] 버튼 글자색 */
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid #D1D5DB;
+        background: #FFFFFF;
+        color: #111827;
         text-decoration: none !important;
-        font-weight: 600;                      /* [조정] 버튼 글자 굵기 */
-        font-size: 14px;                       /* [조정] 버튼 글자 크기 */
-        box-shadow: 0 1px 2px rgba(0,0,0,0.06); /* [조정] 버튼 그림자 */
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
         transition: background 0.15s ease, box-shadow 0.15s ease;
         white-space: nowrap;
         -webkit-tap-highlight-color: transparent;
@@ -238,132 +246,62 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         outline: none;
       }}
       .button-pill:active {{
-        background: #111827;                   /* [조정] 버튼 눌렀을 때 배경색 */
-        color: #FFFFFF;                        /* [조정] 버튼 눌렀을 때 글자색 */
-        border-color: #111827;                 /* [조정] 버튼 눌렀을 때 테두리색 */
+        background: #111827;
+        color: #FFFFFF;
+        border-color: #111827;
         box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
       }}
-      @media (max-width: 420px) {{
-        /* ===== 모바일 전용 조정 ===== */
-        .button-pill {{
-          font-size: 13px;                     /* [조정] 모바일 버튼 글자 크기 */
-          height: 34px;                        /* [조정] 모바일 버튼 높이 */
-          padding: 0 8px;                      /* [조정] 모바일 버튼 내부 여백 */
-        }}
-        .button-bar {{
-          gap: 6px;                            /* [조정] 모바일 버튼 간 간격 */
-          max-width: 100%;                     /* [조정] 모바일 버튼 바 최대 폭 */
-        }}
-        
-        /* ===== 모바일 말풍선 조정 ===== */
-        .chat-container {{
-          gap: 12px;                           /* [조정] 모바일 말풍선 간격 */
-        }}
-        .bubble {{
-          max-width: 85vw;                     /* [조정] 모바일 말풍선 최대 폭 */
-          padding: 10px 12px;                  /* [조정] 모바일 말풍선 내부 여백 */
-          font-size: 13px;                     /* [조정] 모바일 말풍선 글자 크기 */
-        }}
-        .avatar {{
-          width: 40px;                         /* [조정] 모바일 아바타 크기 */
-          height: 40px;                        /* [조정] 모바일 아바타 크기 */
-          flex: 0 0 40px;                      /* [조정] 모바일 아바타 고정 크기 */
-        }}
-        .bubble-user {{
-          margin-left: 40px;                   /* [조정] 모바일 사용자 말풍선 여백 */
-        }}
-        .bubble-bot {{
-          margin-right: 40px;                  /* [조정] 모바일 봇 말풍선 여백 */
-        }}
-      }}
 
-      /* ===== 채팅 영역 ===== */
-      .msg-row {{ 
-        display: flex; 
-        gap: 8px;                              /* [조정] 메시지 행 내부 간격 */
-        align-items: flex-start; 
-        margin-bottom: 16px;                   /* [조정] 메시지 행 간 세로 간격 */
+      /* ===== 로딩 애니메이션 ===== */
+      .loading-dots {{
+        display: flex;
+        gap: 4px;
+        align-items: center;
       }}
-      .msg-row:last-child {{
-        margin-bottom: 0;                      /* 마지막 메시지는 하단 여백 제거 */
+      .loading-dots span {{
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #d1d5db;
+        animation: loading-bounce 1.4s ease-in-out infinite both;
       }}
-      .msg-row.bot {{ justify-content: flex-start; }}
-      .msg-row.user {{ justify-content: flex-end; }}
-      .avatar {{
-        width: 48px;                           /* [조정] 아바타 크기 */
-        height: 48px;                          /* [조정] 아바타 크기 */
-        border-radius: 50%;                    /* [조정] 아바타 둥근 모서리 */
-        object-fit: cover; 
-        flex: 0 0 48px;
+      .loading-dots span:nth-child(1) {{
+        animation-delay: -0.32s;
       }}
-      .bubble {{
-        max-width: 78vw;                       /* [조정] 말풍선 최대 폭 (뷰포트 대비) */
-        padding: 12px 16px;                    /* [조정] 말풍선 내부 여백 (위아래/좌우) */
-        border-radius: 16px;                   /* [조정] 말풍선 둥근 모서리 */
-        line-height: 1.5;                      /* [조정] 말풍선 줄 간격 */
-        font-size: 14px;                       /* [조정] 말풍선 글자 크기 */
-        word-wrap: break-word;
-        white-space: pre-wrap;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* [조정] 말풍선 그림자 */
+      .loading-dots span:nth-child(2) {{
+        animation-delay: -0.16s;
       }}
-      .bubble-user {{
-        background: #FF7A00;                   /* [조정] 사용자 말풍선 배경색 */
-        color: #FFFFFF;                        /* [조정] 사용자 말풍선 글자색 */
-        margin-left: 48px;                     /* [조정] 사용자 말풍선 왼쪽 여백 */
-      }}
-      .bubble-bot {{
-        background: #FFFFFF;                   /* [조정] 봇 말풍선 배경색 */
-        color: #111827;                        /* [조정] 봇 말풍선 글자색 */
-        border: 1px solid #e6e8f0;            /* [조정] 봇 말풍선 테두리 */
-        margin-right: 48px;                    /* [조정] 봇 말풍선 오른쪽 여백 */
-      }}
-      .bubble-bot .deeplink-btn {{
-        display: inline-flex;
-        align-items: center; 
-        justify-content: center;
-        height: 30px;                          /* [조정] 딥링크 버튼 높이 */
-        padding: 0 10px;                       /* [조정] 딥링크 버튼 내부 여백 */
-        margin-top: 6px;                       /* [조정] 딥링크 버튼 위 여백 */
-        border: 1px solid #FF7A00;            /* [조정] 딥링크 버튼 테두리 */
-        border-radius: 10px;                   /* [조정] 딥링크 버튼 둥근 모서리 */
-        background: #FF7A00;                   /* [조정] 딥링크 버튼 배경색 */
-        color: #FFFFFF;                        /* [조정] 딥링크 버튼 글자색 */
-        font-weight: 500;                      /* [조정] 딥링크 버튼 글자 굵기 */
-        font-size: 13px;                       /* [조정] 딥링크 버튼 글자 크기 */
-        text-decoration: none !important; 
-        white-space: nowrap;
-      }}
-      .bubble-bot .deeplink-btn:active {{
-        filter: brightness(0.95);              /* [조정] 딥링크 버튼 눌렀을 때 밝기 */
+      @keyframes loading-bounce {{
+        0%, 80%, 100% {{
+          transform: scale(0);
+          opacity: 0.5;
+        }}
+        40% {{
+          transform: scale(1);
+          opacity: 1;
+        }}
       }}
 
       /* ===== 입력창 고정 ===== */
       [data-testid="stChatInput"] {{
         position: fixed; 
-        bottom: 60px;                          /* [조정] 입력창 하단 여백 (상태 바 높이 50px + 여백 10px) */
-        left: 16px;                            /* [조정] 입력창 왼쪽 여백 */
-        right: 16px;                           /* [조정] 입력창 오른쪽 여백 */
-        z-index: 1001;                         /* [조정] 입력창 레이어 순서 (상태 바보다 위) */
-      }}
-
-            /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
-      .block-container {{
-        padding-bottom: 120px !important;      /* [조정] 메시지 영역 하단 여백 (입력창 높이 + 여유) */
+        bottom: 60px;
+        left: 16px;
+        right: 16px;
+        z-index: 1001;
       }}
       
+      /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
+      .block-container {{
+        padding-bottom: 120px !important;
+      }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
 
 def render_header(logo_uri: str) -> None:
-    """상단 헤더(로고 + 타이틀)를 렌더링합니다.
-    
-    변경 팁:
-    - 로고 크기/타이틀 크기: 전역 CSS의 `.header-logo`, `.header-title`를 조정하세요.
-    - 헤더 배경색/둥근 모서리/여백: `.app-header`를 조정하세요.
-    - 제목 텍스트: 아래 HTML의 "땡겨요 1:1 고객문의" 텍스트를 변경하세요.
-    """
+    """상단 헤더(로고 + 타이틀)를 렌더링합니다."""
     st.markdown(
         f"""
         <div class="app-header">
@@ -378,19 +316,7 @@ def render_header(logo_uri: str) -> None:
 
 
 def render_status_bar(user_id: str, session_id: str, guardrail_result: str = "", intent: str = "") -> None:
-    """상태 바를 렌더링합니다.
-    
-    표시 정보:
-    - 사용자 ID: 고유한 사용자 식별자
-    - 세션 ID: 현재 대화 세션 (축약형으로 표시)
-    - 가드레일 결과: PASS/FAIL (색상 구분)
-    - 인텐트 분류: QNA/AICC (색상 구분)
-    
-    변경 팁:
-    - 상태 바 스타일: 전역 CSS의 `.status-bar`, `.status-badge`를 조정하세요.
-    - 색상 구분: `.status-pass`, `.status-fail`, `.status-qna`, `.status-aicc`를 조정하세요.
-    """
-    import datetime
+    """상태 바를 렌더링합니다."""
     guardrail_class = "status-pass" if guardrail_result == "PASS" else "status-fail"
     intent_class = "status-qna" if intent == "QNA" else "status-aicc"
     
@@ -494,21 +420,7 @@ def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str)
 
 
 def main() -> None:
-    """앱의 진입점.
-    
-    주요 기능:
-    - 환경 설정 및 페이지 구성
-    - 세션 상태 초기화 (사용자 ID, 세션 ID, 메시지 히스토리)
-    - 이미지 로드 및 UI 렌더링
-    - 사용자 입력 처리 및 API 연동
-    
-    자주 바꾸는 설정:
-    - 페이지 제목: `st.set_page_config(page_title=...)`
-    - 페이지 아이콘: `page_icon` 경로 변경 가능
-    - 초기 메시지: `st.session_state["messages"]`의 초기값 변경
-    - 레이아웃: `layout="wide"` → 필요시 `"centered"`
-    - API URL: `call_api` 함수 내 `api_url` 변경
-    """
+    """앱의 진입점."""
     load_dotenv()
     st.set_page_config(
         page_title="땡겨요 고객문의 PoC",
@@ -530,6 +442,8 @@ def main() -> None:
         st.session_state["last_guardrail"] = ""
     if "last_intent" not in st.session_state:
         st.session_state["last_intent"] = ""
+    if "is_loading" not in st.session_state:
+        st.session_state["is_loading"] = False
 
     # 이미지 로드
     logo_path, user_path, bot_path = get_app_paths()
@@ -543,6 +457,10 @@ def main() -> None:
     render_header_buttons()
     render_messages(st.session_state["messages"], user_uri, bot_uri)
     
+    # 로딩 중일 때 스켈레톤 표시
+    if st.session_state["is_loading"]:
+        render_loading_skeleton(bot_uri)
+    
     # 상태 바를 메시지 영역 아래, 입력창 위에 표시
     render_status_bar(
         st.session_state["user_id"], 
@@ -554,31 +472,40 @@ def main() -> None:
     # 사용자 입력 처리
     user_text = st.chat_input("메시지를 입력하세요")
     if user_text:
-        # 사용자 메시지 추가
+        # 즉시 사용자 메시지 추가 및 화면 업데이트
         st.session_state["messages"].append({"role": "user", "content": user_text})
-        
-        # API 호출
-        api_response = call_api(
-            user_text, 
-            st.session_state["user_id"], 
-            st.session_state["session_id"]
-        )
-        
-        # API 응답에서 user_id와 session_id 업데이트
-        if api_response.get("user_id"):
-            st.session_state["user_id"] = api_response["user_id"]
-        if api_response.get("session_id"):
-            st.session_state["session_id"] = api_response["session_id"]
-        
-        # 봇 응답 추가
-        bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
-        st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
-        
-        # 상태 업데이트
-        st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
-        st.session_state["last_intent"] = api_response.get("intent", "")
-        
+        st.session_state["is_loading"] = True
         st.rerun()
+    
+    # 로딩 상태에서 API 호출 처리
+    if st.session_state["is_loading"] and len(st.session_state["messages"]) > 0:
+        # 마지막 메시지가 사용자 메시지인지 확인
+        last_message = st.session_state["messages"][-1]
+        if last_message["role"] == "user":
+            # API 호출
+            api_response = call_api(
+                last_message["content"], 
+                st.session_state["user_id"], 
+                st.session_state["session_id"]
+            )
+            
+            # API 응답에서 user_id와 session_id 업데이트
+            if api_response.get("user_id"):
+                st.session_state["user_id"] = api_response["user_id"]
+            if api_response.get("session_id"):
+                st.session_state["session_id"] = api_response["session_id"]
+            
+            # 봇 응답 추가
+            bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+            st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
+            
+            # 상태 업데이트
+            st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
+            st.session_state["last_intent"] = api_response.get("intent", "")
+            
+            # 로딩 상태 해제
+            st.session_state["is_loading"] = False
+            st.rerun()
 
 
 if __name__ == "__main__":
