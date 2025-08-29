@@ -8,7 +8,7 @@
 - 외부 API (http://34.64.207.124:8000/agent/) 연동
 - 모바일 최적화 UI (412x915 가정)
 - 실시간 채팅 인터페이스
-- 세션 관리 및 사용자 ID 관리
+- 세션 관리 및 사용자 ID 관리 (API에서 제공)
 - 가드레일 결과 표시
 - 인텐트 분류 결과 표시
 """
@@ -18,8 +18,6 @@ import json
 import os
 import re
 import html as html_lib
-import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -53,18 +51,6 @@ def get_app_paths() -> Tuple[Path, Path, Path]:
     user_avatar = root / "img" / "solbear.png"
     bot_avatar = root / "img" / "bikemolly.jpg"
     return logo, user_avatar, bot_avatar
-
-
-def generate_session_id() -> str:
-    """고유한 세션 ID를 생성합니다."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_id = str(uuid.uuid4())[:8]
-    return f"session_{timestamp}_{unique_id}"
-
-
-def generate_user_id() -> str:
-    """고유한 사용자 ID를 생성합니다."""
-    return f"user_{str(uuid.uuid4())[:8]}"
 
 
 def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
@@ -359,12 +345,12 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         right: 16px;                           /* [조정] 입력창 오른쪽 여백 */
         z-index: 1001;                         /* [조정] 입력창 레이어 순서 (상태 바보다 위) */
       }}
-            
-      /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
+
+            /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
       .block-container {{
         padding-bottom: 120px !important;      /* [조정] 메시지 영역 하단 여백 (입력창 높이 + 여유) */
       }}
-
+      
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
@@ -404,6 +390,7 @@ def render_status_bar(user_id: str, session_id: str, guardrail_result: str = "",
     - 상태 바 스타일: 전역 CSS의 `.status-bar`, `.status-badge`를 조정하세요.
     - 색상 구분: `.status-pass`, `.status-fail`, `.status-qna`, `.status-aicc`를 조정하세요.
     """
+    import datetime
     guardrail_class = "status-pass" if guardrail_result == "PASS" else "status-fail"
     intent_class = "status-qna" if intent == "QNA" else "status-aicc"
     
@@ -532,9 +519,9 @@ def main() -> None:
 
     # 세션 상태 초기화
     if "user_id" not in st.session_state:
-        st.session_state["user_id"] = generate_user_id()
+        st.session_state["user_id"] = ""  # API에서 받을 예정
     if "session_id" not in st.session_state:
-        st.session_state["session_id"] = generate_session_id()
+        st.session_state["session_id"] = ""  # API에서 받을 예정
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
             {"role": "assistant", "content": "안녕하세요! 땡겨요 AI 에이전트입니다. 무엇을 도와드릴까요?"}
@@ -577,6 +564,12 @@ def main() -> None:
             st.session_state["session_id"]
         )
         
+        # API 응답에서 user_id와 session_id 업데이트
+        if api_response.get("user_id"):
+            st.session_state["user_id"] = api_response["user_id"]
+        if api_response.get("session_id"):
+            st.session_state["session_id"] = api_response["session_id"]
+        
         # 봇 응답 추가
         bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
         st.session_state["messages"].append({"role": "assistant", "content": bot_reply})
@@ -590,4 +583,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
