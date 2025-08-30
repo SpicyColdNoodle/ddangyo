@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    {
+      "id": 1,
+      "question": "땡겨요는 어떤 서비스인가요?",
+      "category": "서비스 소개"
+    },
+    {
+      "id": 2,
+      "question": "배달 수수료는 얼마인가요?",
+      "category": "수수료 정보"
+    },
+    {
+      "id": 3,
+      "question": "할인 혜택은 어떻게 받을 수 있나요?",
+      "category": "할인 혜택"
+    },
+    {
+      "id": 4,
+      "question": "가맹점 등록은 어떻게 하나요?",
+      "category": "가맹점 지원"
+    },
+    {
+      "id": 5,
+      "question": "고객센터 연락처는 어디인가요?",
+      "category": "고객 지원"
+    }
+  ]
+}
