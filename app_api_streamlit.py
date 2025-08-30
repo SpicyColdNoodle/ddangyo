@@ -411,6 +411,32 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
          text-decoration: none !important;
        }}
 
+       /* ===== 딥링크 버튼 스타일 ===== */
+       .deeplink-btn {{
+         display: inline-block;
+         padding: 8px 12px;
+         background: #FF7A00;
+         color: white !important;
+         text-decoration: none !important;
+         border-radius: 6px;
+         font-size: 12px;
+         font-weight: 600;
+         margin: 4px 4px 4px 0;
+         transition: all 0.2s ease;
+         box-shadow: 0 2px 4px rgba(255, 122, 0, 0.2);
+       }}
+       .deeplink-btn:hover {{
+         background: #e66a00;
+         transform: translateY(-1px);
+         box-shadow: 0 4px 8px rgba(255, 122, 0, 0.3);
+         text-decoration: none !important;
+         color: white !important;
+       }}
+       .deeplink-btn:link, .deeplink-btn:visited {{
+         color: white !important;
+         text-decoration: none !important;
+       }}
+
       /* ===== 로딩 애니메이션 ===== */
       .loading-dots {{
         display: flex;
@@ -559,123 +585,147 @@ def _convert_links_to_buttons(text: str) -> str:
     if not text:
         return ""
 
-    button_label = "앱으로 이동"
-    
-    # 전체 텍스트를 먼저 이스케이프
-    escaped = html_lib.escape(text)
-    
-    # URL 패턴 (http/https 및 커스텀 스킴)
-    url_pattern = re.compile(r"(https?://[^\s]+|[a-zA-Z][a-zA-Z0-9+.-]*://[^\s]+)")
+    try:
+        button_label = "앱으로 이동"
 
-    def repl(match: re.Match) -> str:
-        url = match.group(0)
-        # URL은 이미 이스케이프된 상태이므로 그대로 사용
-        return (
-            f'<a class="deeplink-btn" href="{url}" target="_blank" rel="noopener noreferrer">{button_label}</a>'
-        )
+        # 전체 텍스트를 먼저 이스케이프
+        escaped = html_lib.escape(text)
 
-    converted = url_pattern.sub(repl, escaped)
-    return converted
+        # URL 패턴 (http/https 및 커스텀 스킴)
+        url_pattern = re.compile(r"(https?://[^\s]+|[a-zA-Z][a-zA-Z0-9+.-]*://[^\s]+)")
+
+        def repl(match: re.Match) -> str:
+            try:
+                url = match.group(0)
+                # URL을 안전하게 이스케이프
+                safe_url = html_lib.escape(url)
+                return f'<a class="deeplink-btn" href="{safe_url}" target="_blank" rel="noopener noreferrer">{button_label}</a>'
+            except Exception:
+                return button_label
+
+        converted = url_pattern.sub(repl, escaped)
+        return converted
+
+    except Exception as e:
+        # 변환 실패 시 원본 텍스트를 안전하게 반환
+        return html_lib.escape(text)
 
 
 def get_button_text_from_url(url: str) -> str:
     """URL 패턴에 따라 버튼 텍스트를 결정합니다."""
-    # URL 패턴별 버튼 텍스트 매핑 규칙
-    url_patterns = {
-        # 고객 지원 관련
-        "support": "1:1 고객문의",
-        "help": "도움말",
-        "faq": "자주묻는 질문",
-        "contact": "연락처",
-        "call": "전화상담",
-        
-        # 서비스 관련
-        "service": "서비스 안내",
-        "guide": "이용가이드",
-        "manual": "매뉴얼",
-        "tutorial": "튜토리얼",
-        
-        # 주문/결제 관련
-        "order": "주문조회",
-        "payment": "결제관리",
-        "billing": "청구서",
-        "invoice": "영수증",
-        
-        # 계정 관련
-        "account": "계정관리",
-        "profile": "프로필",
-        "settings": "설정",
-        "preferences": "환경설정",
-        
-        # 앱 관련
-        "app": "앱 다운로드",
-        "download": "다운로드",
-        "install": "설치",
-        
-        # 기타
-        "terms": "이용약관",
-        "privacy": "개인정보처리방침",
-        "notice": "공지사항",
-        "news": "뉴스",
-        "blog": "블로그"
-    }
-    
-    # URL을 소문자로 변환하여 패턴 매칭
-    url_lower = url.lower()
-    
-    # 패턴 매칭 (가장 구체적인 패턴부터 검사)
-    for pattern, button_text in url_patterns.items():
-        if pattern in url_lower:
-            return button_text  # 🔗 이모지 제거
-    
-    # 패턴이 매칭되지 않으면 도메인 기반 텍스트 생성
     try:
-        parsed_url = urlparse(url)
-        if parsed_url.scheme and parsed_url.netloc:
-            domain = parsed_url.netloc
-            if domain.startswith('www.'):
-                domain = domain[4:]
-            return domain  # 🔗 이모지 제거
-        else:
-            return "링크"  # 🔗 이모지 제거
+        if not url or not isinstance(url, str):
+            return "링크"
+
+        # URL 패턴별 버튼 텍스트 매핑 규칙
+        url_patterns = {
+            # 고객 지원 관련
+            "support": "1:1 고객문의",
+            "help": "도움말",
+            "faq": "자주묻는 질문",
+            "contact": "연락처",
+            "call": "전화상담",
+
+            # 서비스 관련
+            "service": "서비스 안내",
+            "guide": "이용가이드",
+            "manual": "매뉴얼",
+            "tutorial": "튜토리얼",
+
+            # 주문/결제 관련
+            "order": "주문조회",
+            "payment": "결제관리",
+            "billing": "청구서",
+            "invoice": "영수증",
+
+            # 계정 관련
+            "account": "계정관리",
+            "profile": "프로필",
+            "settings": "설정",
+            "preferences": "환경설정",
+
+            # 앱 관련
+            "app": "앱 다운로드",
+            "download": "다운로드",
+            "install": "설치",
+
+            # 기타
+            "terms": "이용약관",
+            "privacy": "개인정보처리방침",
+            "notice": "공지사항",
+            "news": "뉴스",
+            "blog": "블로그"
+        }
+
+        # URL을 소문자로 변환하여 패턴 매칭
+        url_lower = url.lower()
+
+        # 패턴 매칭 (가장 구체적인 패턴부터 검사)
+        for pattern, button_text in url_patterns.items():
+            if pattern in url_lower:
+                return button_text
+
+        # 패턴이 매칭되지 않으면 도메인 기반 텍스트 생성
+        try:
+            parsed_url = urlparse(url)
+            if parsed_url.scheme and parsed_url.netloc:
+                domain = parsed_url.netloc
+                if domain.startswith('www.'):
+                    domain = domain[4:]
+                return domain
+            else:
+                return "링크"
+        except Exception:
+            return "링크"
+
     except Exception:
-        return "링크"  # 🔗 이모지 제거
+        return "링크"
 
 def render_url_buttons(ref_urls: List[str]) -> str:
     """refUrl 리스트를 기반으로 URL 버튼들을 렌더링합니다."""
     if not ref_urls:
         return ""
-    
-    # URL 리스트 유효성 검사
-    if not isinstance(ref_urls, list):
-        st.error("refUrl이 리스트 형식이 아닙니다.")
+
+    try:
+        # URL 리스트 유효성 검사
+        if not isinstance(ref_urls, list):
+            return ""
+
+        buttons_list = []
+
+        for i, url in enumerate(ref_urls):
+            try:
+                # URL 문자열 유효성 검사
+                if not isinstance(url, str) or not url.strip():
+                    continue
+
+                url = url.strip()
+
+                # URL 패턴에 따른 버튼 텍스트 생성
+                button_text = get_button_text_from_url(url)
+
+                # HTML 이스케이프 처리
+                safe_url = html_lib.escape(url)
+                safe_button_text = html_lib.escape(button_text)
+
+                button_html = f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer" class="url-button">{safe_button_text}</a>'
+                buttons_list.append(button_html)
+
+            except Exception:
+                # 개별 버튼 생성 실패 시 건너뜀
+                continue
+
+        # 버튼이 하나도 생성되지 않았으면 빈 문자열 반환
+        if not buttons_list:
+            return ""
+
+        # 버튼들을 컨테이너로 감싸서 반환
+        buttons_html = '<div class="url-buttons-container">' + ''.join(buttons_list) + '</div>'
+        return buttons_html
+
+    except Exception:
+        # 전체 함수 실행 실패 시 빈 문자열 반환
         return ""
-    
-    buttons_html = '<div class="url-buttons-container">'
-    
-    for i, url in enumerate(ref_urls):
-        # URL 문자열 유효성 검사
-        if not isinstance(url, str) or not url.strip():
-            st.warning(f"잘못된 URL 형식 (인덱스 {i}): {url}")
-            continue
-        
-        url = url.strip()
-        
-        # URL 패턴에 따른 버튼 텍스트 생성
-        button_text = get_button_text_from_url(url)
-        
-        # HTML 이스케이프 처리
-        safe_url = html_lib.escape(url)
-        safe_button_text = html_lib.escape(button_text)
-        
-        buttons_html += f'''
-        <a href="{safe_url}" target="_blank" rel="noopener noreferrer" class="url-button">
-          {safe_button_text}
-        </a>
-        '''
-    
-    buttons_html += '</div>'
-    return buttons_html
 
 
 def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str) -> None:
@@ -712,18 +762,26 @@ def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str)
             # URL 버튼들 렌더링
             url_buttons_html = render_url_buttons(ref_urls)
             
-            st.markdown(
-                f"""
-                <div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-bottom: {margin_bottom};">
-                  <img src="{bot_uri}" alt="bot" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
-                  <div style="background-color: white; color: #111827; padding: 12px 16px; border-radius: 16px; max-width: 70%; word-wrap: break-word; border: 1px solid #e6e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    {content_html}
-                    {url_buttons_html}
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            # HTML 구조를 안전하게 구성 (f-string 대신 문자열 연결 사용)
+            safe_content_html = content_html if content_html else ""
+            safe_url_buttons_html = url_buttons_html if url_buttons_html else ""
+
+            # HTML을 안전하게 구성하기 위해 문자열 연결 사용
+            bot_message_html = (
+                '<div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-bottom: ' + margin_bottom + ';">'
+                '<img src="' + bot_uri + '" alt="bot" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />'
+                '<div style="background-color: white; color: #111827; padding: 12px 16px; border-radius: 16px; max-width: 70%; word-wrap: break-word; border: 1px solid #e6e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">'
             )
+
+            if safe_content_html:
+                bot_message_html += safe_content_html
+
+            if safe_url_buttons_html:
+                bot_message_html += safe_url_buttons_html
+
+            bot_message_html += '</div></div>'
+
+            st.markdown(bot_message_html, unsafe_allow_html=True)
 
 
 def main() -> None:
