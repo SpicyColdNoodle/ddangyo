@@ -1,5 +1,5 @@
 """
-땡겨요 고객응대 챗봇 (Streamlit)
+땡겨요 고객응대 챗봇 (Streamlit) - 추천 질문 버전
 
 이 파일은 기존 app_streamlit2.py의 UX를 참고하여 외부 API와 연동하는 
 모바일 친화형 챗봇 UI입니다.
@@ -11,6 +11,9 @@
 - 세션 관리 및 사용자 ID 관리 (API에서 제공)
 - 가드레일 결과 표시
 - 인텐트 분류 결과 표시
+- 감정 분석 결과 표시
+- 최초 진입 시 인사 메시지 아래에 5개의 샘플 질문 제시
+- 샘플 질문 클릭 시 해당 텍스트로 질문
 """
 
 import base64
@@ -53,6 +56,22 @@ def get_app_paths() -> Tuple[Path, Path, Path]:
     return logo, user_avatar, bot_avatar
 
 
+def load_recommendations() -> List[Dict[str, Any]]:
+    """추천 질문 목록을 JSON 파일에서 로드합니다."""
+    try:
+        recommendations_file = Path(__file__).resolve().parent / "recommendations.json"
+        if recommendations_file.exists():
+            with open(recommendations_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get("recommendations", [])
+        else:
+            st.warning("추천 질문 파일을 찾을 수 없습니다.")
+            return []
+    except Exception as e:
+        st.error(f"추천 질문 로드 오류: {e}")
+        return []
+
+
 def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
     """외부 API를 호출하여 응답을 받습니다."""
     api_url = "http://34.64.207.124:8000/agent/"
@@ -79,7 +98,8 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
             "session_id": session_id,
             "response": "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             "guardrail_result": "FAIL",
-            "intent": "ERROR"
+            "intent": "ERROR",
+            "sentiment": "NEUTRAL"
         }
 
 
@@ -204,10 +224,22 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         background: #fef3c7;
         color: #d97706;
       }}
+      .status-positive {{
+        background: #d1fae5;
+        color: #065f46;
+      }}
+      .status-negative {{
+        background: #fee2e2;
+        color: #991b1b;
+      }}
+      .status-neutral {{
+        background: #f3f4f6;
+        color: #4b5563;
+      }}
 
       /* ===== 버튼 바 영역 ===== */
       .button-bar-wrapper {{
-        margin: 8px -16px 8px -16px;
+        margin: 8px -16px 16px -16px;
         padding: 0 12px;
       }}
       .button-bar {{
@@ -250,6 +282,44 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         color: #FFFFFF;
         border-color: #111827;
         box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+      }}
+
+
+                    /* ===== 샘플 질문 영역 ===== */
+       .sample-questions-container {{
+         margin: 0;
+         padding: 0;
+         background: transparent;
+         border: none;
+         box-shadow: none;
+       }}
+       .sample-questions-grid {{
+         display: flex;
+         flex-direction: column;
+         gap: 6px; /* [조정] 샘플 질문 간 간격 (px) - 더 가깝게 조절 가능 */
+       }}
+             .sample-questions-grid button {{
+         width: 100%;
+         padding: 12px 16px; /* [조정] 버튼 내부 여백 (상하 좌우) */
+         background: white;
+         border: 1px solid #e2e8f0;
+         border-radius: 8px;
+         color: #334155;
+         font-size: 14px;
+         font-weight: 500;
+         text-align: left;
+         cursor: pointer;
+         transition: all 0.2s ease;
+         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+       }}
+      .sample-questions-grid button:hover {{
+        border-color: #FF7A00;
+        background: #fff7ed;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(255, 122, 0, 0.15);
+      }}
+      .sample-questions-grid button:active {{
+        transform: translateY(0);
       }}
 
       /* ===== 로딩 애니메이션 ===== */
@@ -315,10 +385,18 @@ def render_header(logo_uri: str) -> None:
     )
 
 
-def render_status_bar(user_id: str, session_id: str, guardrail_result: str = "", intent: str = "") -> None:
+def render_status_bar(user_id: str, session_id: str, guardrail_result: str = "", intent: str = "", sentiment: str = "") -> None:
     """상태 바를 렌더링합니다."""
     guardrail_class = "status-pass" if guardrail_result == "PASS" else "status-fail"
     intent_class = "status-qna" if intent == "QNA" else "status-aicc"
+    
+    # 감정 분석 클래스 결정
+    if sentiment == "POSITIVE":
+        sentiment_class = "status-positive"
+    elif sentiment == "NEGATIVE":
+        sentiment_class = "status-negative"
+    else:
+        sentiment_class = "status-neutral"
     
     st.markdown(
         f"""
@@ -333,11 +411,11 @@ def render_status_bar(user_id: str, session_id: str, guardrail_result: str = "",
           </div>
           {f'<div class="status-item"><span>가드레일:</span><span class="status-badge {guardrail_class}">{guardrail_result}</span></div>' if guardrail_result else ''}
           {f'<div class="status-item"><span>인텐트:</span><span class="status-badge {intent_class}">{intent}</span></div>' if intent else ''}
+          {f'<div class="status-item"><span>감정:</span><span class="status-badge {sentiment_class}">{sentiment}</span></div>' if sentiment else ''}
         </div>
         """,
         unsafe_allow_html=True,
     )
-
 
 def render_header_buttons() -> None:
     """헤더 아래에 가로 정렬된 3개의 버튼을 렌더링합니다."""
@@ -353,6 +431,35 @@ def render_header_buttons() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+
+def render_sample_questions() -> None:
+    """샘플 질문 5개를 렌더링합니다."""
+    recommendations = load_recommendations()
+    
+    if not recommendations:
+        return
+    
+    st.markdown("""
+    <div class="sample-questions-container">
+      <div class="sample-questions-grid">
+    """, unsafe_allow_html=True)
+    
+    for rec in recommendations:
+        if st.button(
+            rec["question"], 
+            key=f"sample_{rec['id']}", 
+            help=f"클릭하면 '{rec['question']}' 질문이 입력됩니다"
+        ):
+            # 버튼 클릭 시 입력창에 질문 설정
+            st.session_state["pending_question"] = rec["question"]
+            st.rerun()
+    
+    st.markdown("""
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def _convert_links_to_buttons(text: str) -> str:
@@ -423,7 +530,7 @@ def main() -> None:
     """앱의 진입점."""
     load_dotenv()
     st.set_page_config(
-        page_title="땡겨요 고객문의 PoC",
+        page_title="땡겨요 고객문의 PoC - 추천 질문",
         page_icon=str((Path(__file__).resolve().parent / "img" / "mainlogo.png")),
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -442,8 +549,14 @@ def main() -> None:
         st.session_state["last_guardrail"] = ""
     if "last_intent" not in st.session_state:
         st.session_state["last_intent"] = ""
+    if "last_sentiment" not in st.session_state:
+        st.session_state["last_sentiment"] = ""
     if "is_loading" not in st.session_state:
         st.session_state["is_loading"] = False
+    if "show_samples" not in st.session_state:
+        st.session_state["show_samples"] = True  # 처음에만 샘플 질문 표시
+    if "pending_question" not in st.session_state:
+        st.session_state["pending_question"] = None
 
     # 이미지 로드
     logo_path, user_path, bot_path = get_app_paths()
@@ -457,6 +570,10 @@ def main() -> None:
     render_header_buttons()
     render_messages(st.session_state["messages"], user_uri, bot_uri)
     
+    # 처음 진입 시에만 샘플 질문 표시
+    if st.session_state["show_samples"] and len(st.session_state["messages"]) == 1:
+        render_sample_questions()
+    
     # 로딩 중일 때 스켈레톤 표시
     if st.session_state["is_loading"]:
         render_loading_skeleton(bot_uri)
@@ -466,15 +583,27 @@ def main() -> None:
         st.session_state["user_id"], 
         st.session_state["session_id"],
         st.session_state["last_guardrail"],
-        st.session_state["last_intent"]
+        st.session_state["last_intent"],
+        st.session_state["last_sentiment"]
     )
 
     # 사용자 입력 처리
     user_text = st.chat_input("메시지를 입력하세요")
+    
+    # Handle pending question from sample buttons
+    if st.session_state.get("pending_question"):
+        user_text = st.session_state["pending_question"]
+        st.session_state["pending_question"] = None  # Clear pending question
+    
     if user_text:
         # 즉시 사용자 메시지 추가 및 화면 업데이트
         st.session_state["messages"].append({"role": "user", "content": user_text})
         st.session_state["is_loading"] = True
+        
+        # 샘플 질문 숨기기 (첫 번째 사용자 메시지 후)
+        if st.session_state["show_samples"]:
+            st.session_state["show_samples"] = False
+        
         st.rerun()
     
     # 로딩 상태에서 API 호출 처리
@@ -502,6 +631,7 @@ def main() -> None:
             # 상태 업데이트
             st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
             st.session_state["last_intent"] = api_response.get("intent", "")
+            st.session_state["last_sentiment"] = api_response.get("sentiment", "NEUTRAL")
             
             # 로딩 상태 해제
             st.session_state["is_loading"] = False
