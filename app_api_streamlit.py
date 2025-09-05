@@ -131,7 +131,8 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
     }
     
     try:
-        response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+        # 타임아웃을 10초로 단축하여 응답 속도 향상
+        response = requests.post(api_url, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
         api_response = response.json()
         
@@ -157,22 +158,23 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
                     parsed = urlparse(url)
                     if parsed.scheme and parsed.netloc:
                         valid_urls.append(url)
-                    else:
-                        st.warning(f"잘못된 URL 형식: {url}")
+                    # else:
+                    #     st.warning(f"잘못된 URL 형식: {url}")  # 성능 향상을 위해 주석 처리
                 except Exception as e:
-                    st.warning(f"URL 파싱 오류: {url} - {e}")
+                    # st.warning(f"URL 파싱 오류: {url} - {e}")  # 성능 향상을 위해 주석 처리
+                    continue  # 오류 발생 시 해당 URL 건너뛰기
             
             api_response["refUrl"] = valid_urls
 
-            # 디버깅용 로그
-            if valid_urls:
-                st.info(f"테스트 URL 추가됨: {len(valid_urls)}개 - {valid_urls}")
+            # 디버깅용 로그 (성능 향상을 위해 주석 처리)
+            # if valid_urls:
+            #     st.info(f"테스트 URL 추가됨: {len(valid_urls)}개 - {valid_urls}")
 
         # 상담원 관련 키워드가 포함된 경우 상담원 전화 연결 버튼 추가
-        if check_keyword_match(user_text, COUNSELOR_KEYWORDS) and (not api_response.get("refUrl") or len(api_response["refUrl"]) == 0):
+        #if check_keyword_match(user_text, COUNSELOR_KEYWORDS) and (not api_response.get("refUrl") or len(api_response["refUrl"]) == 0):
             # 상담원 전화 연결 URL 추가
-            counselor_url = "https://www.ddangyo.com/"  # 지금은 땡겨요 홈페이지로 랜딩됨
-            api_response["refUrl"] = [counselor_url]
+           # counselor_url = "https://www.ddangyo.com/"  # 지금은 땡겨요 홈페이지로 랜딩됨
+           # api_response["refUrl"] = [counselor_url]
 
         return api_response
     except requests.exceptions.RequestException as e:
@@ -412,31 +414,34 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
          box-shadow: 0 2px 8px rgba(255, 122, 0, 0.15) !important; /* [조정] 클릭 시 그림자 */
        }}
 
-       /* ===== URL 버튼 영역 ===== */
-       .url-buttons-container {{
-         margin-top: 12px;
-         display: flex;
-         flex-direction: column;
-         gap: 8px;
-       }}
-       .url-button {{
-         display: inline-block;
-         padding: 12px 18px;
-         background: #FF7A00;
-         color: white !important;
-         text-decoration: none !important;
-         border-radius: 10px;
-         font-size: 14px;
-         font-weight: 600;
-         text-align: center;
-         transition: all 0.2s ease;
-         box-shadow: 0 2px 6px rgba(255, 122, 0, 0.25);
-         border: none;
-         cursor: pointer;
-         max-width: 100%;
-         word-wrap: break-word;
-         letter-spacing: 0.5px;
-       }}
+             /* ===== URL 버튼 영역 ===== */
+      .url-buttons-container {{
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }}
+      .url-button {{
+        display: block; /* inline-block에서 block으로 변경하여 전체 너비 차지 */
+        width: 100%; /* 전체 너비 차지 */
+        padding: 12px 18px;
+        background: #FF7A00;
+        color: white !important;
+        text-decoration: none !important;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(255, 122, 0, 0.25);
+        border: none;
+        cursor: pointer;
+        word-wrap: break-word;
+        letter-spacing: 0.5px;
+        box-sizing: border-box; /* padding을 포함한 전체 너비 계산 */
+        margin: 0; /* 기본 마진 제거 */
+      }}
        .url-button:hover {{
          background: #e66a00;
          transform: translateY(-2px);
@@ -454,20 +459,23 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
          text-decoration: none !important;
        }}
 
-       /* ===== 딥링크 버튼 스타일 ===== */
-       .deeplink-btn {{
-         display: inline-block;
-         padding: 8px 12px;
-         background: #FF7A00;
-         color: white !important;
-         text-decoration: none !important;
-         border-radius: 6px;
-         font-size: 12px;
-         font-weight: 600;
-         margin: 4px 4px 4px 0;
-         transition: all 0.2s ease;
-         box-shadow: 0 2px 4px rgba(255, 122, 0, 0.2);
-       }}
+             /* ===== 딥링크 버튼 스타일 ===== */
+      .deeplink-btn {{
+        display: block; /* inline-block에서 block으로 변경하여 줄바꿈 및 전체 너비 차지 */
+        width: 100%; /* 전체 너비 차지 */
+        padding: 12px 16px; /* 패딩 증가로 더 클릭하기 쉽게 */
+        background: #FF7A00;
+        color: white !important;
+        text-decoration: none !important;
+        border-radius: 8px; /* 모서리 둥글기 증가 */
+        font-size: 14px; /* 폰트 크기 증가 */
+        font-weight: 600;
+        margin: 8px 0; /* 상하 마진으로 버튼 간 간격 확보, 좌우 마진 제거 */
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(255, 122, 0, 0.25);
+        text-align: center; /* 텍스트 중앙 정렬 */
+        box-sizing: border-box; /* padding을 포함한 전체 너비 계산 */
+      }}
        .deeplink-btn:hover {{
          background: #e66a00;
          transform: translateY(-1px);
@@ -510,6 +518,30 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
         }}
       }}
 
+      /* ===== 상담 종료 버튼 스타일 ===== */
+      div[data-testid="column"] button[data-testid="stButton"] {{
+        width: 100% !important;
+        background: #dc2626 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin: 8px 0 !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2) !important;
+      }}
+      div[data-testid="column"] button[data-testid="stButton"]:hover {{
+        background: #b91c1c !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3) !important;
+      }}
+      div[data-testid="column"] button[data-testid="stButton"]:active {{
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2) !important;
+      }}
+
       /* ===== 입력창 고정 ===== */
       [data-testid="stChatInput"] {{
         position: fixed; 
@@ -521,7 +553,64 @@ def render_global_css(logo_uri: str, user_uri: str, bot_uri: str) -> None:
       
       /* ===== 메시지 영역 하단 여백 (입력창 겹침 방지) ===== */
       .block-container {{
-        padding-bottom: 120px !important;
+        padding-bottom: 160px !important; /* 상담 종료 버튼 공간 추가 */
+      }}
+
+      /* ===== 자동 스크롤을 위한 JavaScript ===== */
+      .scroll-to-bottom {{
+        scroll-behavior: smooth;
+      }}
+
+      /* ===== 토스트 메시지 스타일 ===== */
+      .toast-message {{
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        color: white !important;
+        padding: 10px 10px !important;
+        border-radius: 20px !important;
+        font-size: 18px !important;
+        font-weight: 500 !important;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+        z-index: 99999 !important;
+        text-align: center !important;
+        min-width: 320px !important;
+        max-width: 90vw !important;
+        white-space: nowrap !important;
+        animation: toast-show 3s ease-in-out forwards !important;
+        pointer-events: none !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }}
+
+      @keyframes toast-show {{
+        0% {{
+          opacity: 0 !important;
+          transform: translate(-50%, -50%) scale(0.7) !important;
+        }}
+        10% {{
+          opacity: 1 !important;
+          transform: translate(-50%, -50%) scale(1.05) !important;
+        }}
+        15% {{
+          transform: translate(-50%, -50%) scale(1) !important;
+        }}
+        85% {{
+          opacity: 1 !important;
+          transform: translate(-50%, -50%) scale(1) !important;
+        }}
+        100% {{
+          opacity: 0 !important;
+          transform: translate(-50%, -50%) scale(0.7) !important;
+        }}
+      }}
+
+      /* Streamlit 요소들 위에 토스트가 표시되도록 보장 */
+      .toast-message {{
+        position: fixed !important;
+        z-index: 999999 !important;
       }}
     </style>
     """
@@ -614,6 +703,7 @@ def render_sample_questions() -> None:
         ):
             # 버튼 클릭 시 입력창에 질문 설정
             st.session_state["pending_question"] = rec["question"]
+            # 샘플 질문 클릭 시에만 rerun (필수)
             st.rerun()
     
     # 샘플 질문 컨테이너 종료
@@ -807,6 +897,9 @@ def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str)
     # 간격 조정 변수
     message_gap = 10  # [조정] 메시지 간 간격 (px)
     
+    # 메시지 컨테이너에 고유 ID 추가 (스크롤 대상)
+    st.markdown('<div id="messages-container">', unsafe_allow_html=True)
+    
     # 간단한 방식으로 메시지 렌더링
     for i, msg in enumerate(messages):
         role = msg.get("role", "assistant")
@@ -855,6 +948,9 @@ def render_messages(messages: List[Dict[str, str]], user_uri: str, bot_uri: str)
             bot_message_html += '</div></div>'
 
             st.markdown(bot_message_html, unsafe_allow_html=True)
+    
+    # 메시지 컨테이너 종료
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def main() -> None:
@@ -888,6 +984,8 @@ def main() -> None:
         st.session_state["show_samples"] = True  # 처음에만 샘플 질문 표시
     if "pending_question" not in st.session_state:
         st.session_state["pending_question"] = None
+    if "show_toast" not in st.session_state:
+        st.session_state["show_toast"] = False
 
     # 이미지 로드
     logo_path, user_path, bot_path = get_app_paths()
@@ -909,6 +1007,52 @@ def main() -> None:
     if st.session_state["is_loading"]:
         render_loading_skeleton(bot_uri)
     
+    # 상담 종료 버튼 (대화가 시작된 후에만 표시)
+    if len(st.session_state["messages"]) > 1:  # 초기 인사말 외에 메시지가 있을 때만 표시
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("◀ 상담 종료하기", key="end_chat", help="대화를 종료하고 새로운 상담을 시작합니다", type="secondary"):
+                # 세션 상태 초기화
+                st.session_state["user_id"] = ""
+                st.session_state["session_id"] = ""
+                st.session_state["messages"] = [
+                    {"role": "assistant", "content": "안녕하세요! 땡겨요 AI 에이전트입니다. 무엇을 도와드릴까요?"}
+                ]
+                st.session_state["last_guardrail"] = ""
+                st.session_state["last_intent"] = ""
+                st.session_state["last_sentiment"] = ""
+                st.session_state["is_loading"] = False
+                st.session_state["show_samples"] = True  # 샘플 질문 다시 표시
+                st.session_state["pending_question"] = None
+                
+                # 세션 상태에 토스트 메시지 플래그 설정
+                st.session_state["show_toast"] = True
+                
+                # 상담 종료 시에만 rerun (필수)
+                st.rerun()
+
+    # 토스트 메시지 표시 (상담 종료 후)
+    if st.session_state.get("show_toast", False):
+        st.markdown(
+            """
+            <div class="toast-message" id="toast-message">
+                ✅ 상담이 종료되었어요.
+            </div>
+            <script>
+            // 토스트 메시지 자동 제거
+            setTimeout(function() {
+                var toast = document.getElementById('toast-message');
+                if (toast) {
+                    toast.style.display = 'none';
+                }
+            }, 3000);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        # 토스트 표시 후 플래그 해제
+        st.session_state["show_toast"] = False
+
     # 상태 바를 메시지 영역 아래, 입력창 위에 표시
     render_status_bar(
         st.session_state["user_id"], 
@@ -927,7 +1071,7 @@ def main() -> None:
         st.session_state["pending_question"] = None  # Clear pending question
     
     if user_text:
-        # 즉시 사용자 메시지 추가 및 화면 업데이트
+        # 즉시 사용자 메시지 추가
         st.session_state["messages"].append({"role": "user", "content": user_text})
         st.session_state["is_loading"] = True
         
@@ -935,50 +1079,66 @@ def main() -> None:
         if st.session_state["show_samples"]:
             st.session_state["show_samples"] = False
         
+        # API 호출을 즉시 실행하여 응답 대기 시간 단축
+        api_response = call_api(
+            user_text, 
+            st.session_state["user_id"], 
+            st.session_state["session_id"]
+        )
+        
+        # API 응답에서 user_id와 session_id 업데이트
+        if api_response.get("user_id"):
+            st.session_state["user_id"] = api_response["user_id"]
+        if api_response.get("session_id"):
+            st.session_state["session_id"] = api_response["session_id"]
+        
+        # 봇 응답 추가 (refUrl 포함)
+        response = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+
+        if isinstance(response, str) and response.strip().startswith(('{', '[')):
+          response = "상담원 연결 링크를 안내드리겠습니다. https://www.ddangyo.com/"
+        
+        bot_reply = response
+        ref_urls = api_response.get("refUrl", [])  # refUrl 필드 추가
+        
+        st.session_state["messages"].append({
+            "role": "assistant", 
+            "content": bot_reply,
+            "refUrl": ref_urls  # refUrl을 메시지에 포함
+        })
+        
+        # 상태 업데이트
+        st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
+        st.session_state["last_intent"] = api_response.get("intent", "")
+        st.session_state["last_sentiment"] = api_response.get("sentiment", "NEUTRAL")
+        
+        # 로딩 상태 해제
+        st.session_state["is_loading"] = False
+        
+        # 자동 스크롤을 위한 JavaScript 추가 (지연 시간 최소화)
+        st.markdown(
+            """
+            <script>
+            setTimeout(function() {
+                var messagesContainer = document.getElementById('messages-container');
+                if (messagesContainer) {
+                    messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                } else {
+                    window.scrollTo({
+                        top: document.body.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 100);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        # 한 번만 rerun하여 모든 변경사항을 반영
         st.rerun()
     
-    # 로딩 상태에서 API 호출 처리
-    if st.session_state["is_loading"] and len(st.session_state["messages"]) > 0:
-        # 마지막 메시지가 사용자 메시지인지 확인
-        last_message = st.session_state["messages"][-1]
-        if last_message["role"] == "user":
-            # API 호출
-            api_response = call_api(
-                last_message["content"], 
-                st.session_state["user_id"], 
-                st.session_state["session_id"]
-            )
-            
-            # API 응답에서 user_id와 session_id 업데이트
-            if api_response.get("user_id"):
-                st.session_state["user_id"] = api_response["user_id"]
-            if api_response.get("session_id"):
-                st.session_state["session_id"] = api_response["session_id"]
-            
-            # 봇 응답 추가 (refUrl 포함)
-            response = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
-
-            if isinstance(response, str) and response.strip().startswith(('{', '[')):
-              response = "상담원 연결 링크를 안내드리겠습니다."
-            
-            #bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
-            bot_reply = response
-            ref_urls = api_response.get("refUrl", [])  # refUrl 필드 추가
-            
-            st.session_state["messages"].append({
-                "role": "assistant", 
-                "content": bot_reply,
-                "refUrl": ref_urls  # refUrl을 메시지에 포함
-            })
-            
-            # 상태 업데이트
-            st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
-            st.session_state["last_intent"] = api_response.get("intent", "")
-            st.session_state["last_sentiment"] = api_response.get("sentiment", "NEUTRAL")
-            
-            # 로딩 상태 해제
-            st.session_state["is_loading"] = False
-            st.rerun()
+    # 이제 API 호출이 사용자 입력 시 즉시 처리되므로 이 블록은 불필요
 
 
 if __name__ == "__main__":
