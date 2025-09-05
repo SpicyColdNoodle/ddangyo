@@ -16,6 +16,7 @@
 - 샘플 질문 클릭 시 해당 텍스트로 질문
 - API 응답의 res.refUrl을 기반으로 답변 말풍선에 버튼 렌더링
 - 복수의 URL에 대응하여 여러 버튼 생성
+- 키워드 기반 자동 버튼 생성 (상담원 연결, 테스트 등)
 
 개발자: AI Assistant
 버전: 1.0
@@ -33,6 +34,42 @@ from urllib.parse import urlparse
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+
+# ===== 키워드 설정 =====
+# 상담원 전화 연결을 위한 키워드 리스트 (사용자 입력에서 이 키워드들이 포함되면 전화 연결 버튼이 표시됩니다)
+COUNSELOR_KEYWORDS = [
+    "상담원",
+    "전화상담",
+    "전화",
+    "연결",
+    "통화",
+    "고객센터",
+    "문의사항",
+    "상담요청",
+    "전화요청"
+]
+
+# 테스트용 키워드 (개발/테스트 시 버튼 기능을 테스트하기 위한 키워드)
+TEST_KEYWORDS = [
+    "버튼테스트1234",
+    "testbutton"
+]
+
+def check_keyword_match(text: str, keywords: List[str]) -> bool:
+    """
+    텍스트에 키워드 리스트 중 하나라도 포함되어 있는지 확인합니다.
+
+    Args:
+        text: 검사할 텍스트
+        keywords: 키워드 리스트
+
+    Returns:
+        bool: 키워드가 하나라도 포함되어 있으면 True
+    """
+    if not text or not keywords:
+        return False
+
+    return any(keyword in text for keyword in keywords)
 
 
 def load_image_safe(path: Path) -> Optional[bytes]:
@@ -103,7 +140,7 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
             api_response["refUrl"] = []
         
         # 테스트용: 특정 키워드 포함 시 가상의 refUrl 추가
-        if "버튼테스트1234" in user_text:
+        if check_keyword_match(user_text, TEST_KEYWORDS):
             # URL 패턴 테스트를 위한 다양한 URL들
             test_urls = [
                 "https://support.example.com/call",      # 1:1 고객문의
@@ -126,11 +163,17 @@ def call_api(user_text: str, user_id: str, session_id: str) -> Dict[str, Any]:
                     st.warning(f"URL 파싱 오류: {url} - {e}")
             
             api_response["refUrl"] = valid_urls
-            
+
             # 디버깅용 로그
             if valid_urls:
                 st.info(f"테스트 URL 추가됨: {len(valid_urls)}개 - {valid_urls}")
-        
+
+        # 상담원 관련 키워드가 포함된 경우 상담원 전화 연결 버튼 추가
+        if check_keyword_match(user_text, COUNSELOR_KEYWORDS) and (not api_response.get("refUrl") or len(api_response["refUrl"]) == 0):
+            # 상담원 전화 연결 URL 추가
+            counselor_url = "https://www.ddangyo.com/"  # 지금은 땡겨요 홈페이지로 랜딩됨
+            api_response["refUrl"] = [counselor_url]
+
         return api_response
     except requests.exceptions.RequestException as e:
         st.error(f"API 호출 오류: {e}")
@@ -580,14 +623,38 @@ def render_sample_questions() -> None:
     """, unsafe_allow_html=True)
 
 
+def _get_button_text_for_url(url: str) -> str:
+    """URL 패턴에 따라 적절한 버튼 텍스트를 반환합니다."""
+    try:
+        if not url:
+            return "링크"
+
+        # 특정 URL 패턴에 따른 버튼 텍스트 매핑
+        url_patterns = {
+            "https://sendmessage-sh-9224.twil.io/send-sms": "사장님께 문자하기",
+            "https://sendmessage-sh-9224.twil.io/make-call": "사장님께 전화하기",
+            "https://support.example.com/call": "고객센터 연결하기",
+            "https://www.ddangyo.com": "고객센터 전화하기"
+        }
+
+        # 정확한 패턴 매칭 (startswith 사용)
+        for pattern_url, button_text in url_patterns.items():
+            if url.startswith(pattern_url):
+                return button_text
+
+        # 기본 버튼 텍스트
+        return "링크 열기"
+
+    except Exception:
+        return "링크 열기"
+
+
 def _convert_links_to_buttons(text: str) -> str:
     """텍스트 내 URL을 탐지해 버튼(anchor) HTML로 치환합니다."""
     if not text:
         return ""
 
     try:
-        button_label = "앱으로 이동"
-
         # 전체 텍스트를 먼저 이스케이프
         escaped = html_lib.escape(text)
 
@@ -597,11 +664,13 @@ def _convert_links_to_buttons(text: str) -> str:
         def repl(match: re.Match) -> str:
             try:
                 url = match.group(0)
+                # URL 패턴에 따른 버튼 텍스트 결정
+                button_text = _get_button_text_for_url(url)
                 # URL을 안전하게 이스케이프
                 safe_url = html_lib.escape(url)
-                return f'<a class="deeplink-btn" href="{safe_url}" target="_blank" rel="noopener noreferrer">{button_label}</a>'
+                return f'<a class="deeplink-btn" href="{safe_url}" target="_blank" rel="noopener noreferrer">{button_text}</a>'
             except Exception:
-                return button_label
+                return "링크 열기"
 
         converted = url_pattern.sub(repl, escaped)
         return converted
@@ -664,6 +733,10 @@ def get_button_text_from_url(url: str) -> str:
         for pattern, button_text in url_patterns.items():
             if pattern in url_lower:
                 return button_text
+
+        # tel: 스킴 처리 (상담원 전화 연결)
+        if url_lower.startswith('tel:'):
+            return "상담원 연결하기"
 
         # 패턴이 매칭되지 않으면 도메인 기반 텍스트 생성
         try:
@@ -883,7 +956,13 @@ def main() -> None:
                 st.session_state["session_id"] = api_response["session_id"]
             
             # 봇 응답 추가 (refUrl 포함)
-            bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+            response = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+
+            if isinstance(response, str) and response.strip().startswith(('{', '[')):
+              response = "상담원 연결 링크를 안내드리겠습니다."
+            
+            #bot_reply = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+            bot_reply = response
             ref_urls = api_response.get("refUrl", [])  # refUrl 필드 추가
             
             st.session_state["messages"].append({
