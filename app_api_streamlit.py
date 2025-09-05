@@ -194,16 +194,16 @@ def render_loading_skeleton(bot_uri: str) -> None:
     """답변 대기 중 로딩 스켈레톤을 렌더링합니다."""
     st.markdown(
         f"""
-        <div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-top: 20px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 8px; margin-top: 20px; margin-bottom: 10px;" id="loading-skeleton">
           <img src="{bot_uri}" alt="bot" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
-          <div style="background-color: white; border: 1px solid #e6e8f0; border-radius: 16px; padding: 12px 16px; min-width: 200px; max-width: 70%;">
+          <div style="background-color: white; border: 1px solid #e6e8f0; border-radius: 16px; padding: 12px 16px; min-width: 200px; max-width: 70%; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <div class="loading-dots">
                 <span></span>
                 <span></span>
                 <span></span>
               </div>
-              <span style="color: #6b7280; font-size: 14px;">답변을 생성하고 있습니다...</span>
+              <span style="color: #6b7280; font-size: 14px; font-weight: 500;">답변을 생성하고 있습니다...</span>
             </div>
           </div>
         </div>
@@ -986,6 +986,8 @@ def main() -> None:
         st.session_state["pending_question"] = None
     if "show_toast" not in st.session_state:
         st.session_state["show_toast"] = False
+    if "api_processing" not in st.session_state:
+        st.session_state["api_processing"] = False
 
     # 이미지 로드
     logo_path, user_path, bot_path = get_app_paths()
@@ -1071,7 +1073,7 @@ def main() -> None:
         st.session_state["pending_question"] = None  # Clear pending question
     
     if user_text:
-        # 즉시 사용자 메시지 추가
+        # 1단계: 즉시 사용자 메시지 표시하고 로딩 상태로 전환
         st.session_state["messages"].append({"role": "user", "content": user_text})
         st.session_state["is_loading"] = True
         
@@ -1079,64 +1081,79 @@ def main() -> None:
         if st.session_state["show_samples"]:
             st.session_state["show_samples"] = False
         
-        # API 호출을 즉시 실행하여 응답 대기 시간 단축
-        api_response = call_api(
-            user_text, 
-            st.session_state["user_id"], 
-            st.session_state["session_id"]
-        )
-        
-        # API 응답에서 user_id와 session_id 업데이트
-        if api_response.get("user_id"):
-            st.session_state["user_id"] = api_response["user_id"]
-        if api_response.get("session_id"):
-            st.session_state["session_id"] = api_response["session_id"]
-        
-        # 봇 응답 추가 (refUrl 포함)
-        response = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
-
-        if isinstance(response, str) and response.strip().startswith(('{', '[')):
-          response = "상담원 연결 링크를 안내드리겠습니다. https://www.ddangyo.com/"
-        
-        bot_reply = response
-        ref_urls = api_response.get("refUrl", [])  # refUrl 필드 추가
-        
-        st.session_state["messages"].append({
-            "role": "assistant", 
-            "content": bot_reply,
-            "refUrl": ref_urls  # refUrl을 메시지에 포함
-        })
-        
-        # 상태 업데이트
-        st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
-        st.session_state["last_intent"] = api_response.get("intent", "")
-        st.session_state["last_sentiment"] = api_response.get("sentiment", "NEUTRAL")
-        
-        # 로딩 상태 해제
-        st.session_state["is_loading"] = False
-        
-        # 자동 스크롤을 위한 JavaScript 추가 (지연 시간 최소화)
-        st.markdown(
-            """
-            <script>
-            setTimeout(function() {
-                var messagesContainer = document.getElementById('messages-container');
-                if (messagesContainer) {
-                    messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                } else {
-                    window.scrollTo({
-                        top: document.body.scrollHeight,
-                        behavior: 'smooth'
-                    });
-                }
-            }, 100);
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        # 한 번만 rerun하여 모든 변경사항을 반영
+        # 즉시 화면 업데이트 (사용자 메시지와 로딩 표시)
         st.rerun()
+    
+    # 2단계: 로딩 상태에서 API 호출 처리
+    if st.session_state["is_loading"] and len(st.session_state["messages"]) > 0:
+        last_message = st.session_state["messages"][-1]
+        if last_message["role"] == "user" and not st.session_state.get("api_processing", False):
+            # API 처리 시작 플래그 설정 (중복 호출 방지)
+            st.session_state["api_processing"] = True
+            
+            # 로딩 스켈레톤을 먼저 보여주기 위해 잠시 대기
+            import time
+            time.sleep(0.1)  # 100ms 대기로 로딩 스켈레톤 표시 보장
+            
+            # API 호출
+            api_response = call_api(
+                last_message["content"], 
+                st.session_state["user_id"], 
+                st.session_state["session_id"]
+            )
+            
+            # API 응답에서 user_id와 session_id 업데이트
+            if api_response.get("user_id"):
+                st.session_state["user_id"] = api_response["user_id"]
+            if api_response.get("session_id"):
+                st.session_state["session_id"] = api_response["session_id"]
+            
+            # 봇 응답 추가 (refUrl 포함)
+            response = api_response.get("response", "죄송합니다. 응답을 받지 못했습니다.")
+
+            if isinstance(response, str) and response.strip().startswith(('{', '[')):
+              response = "상담원 연결 링크를 안내드리겠습니다. https://www.ddangyo.com/"
+            
+            bot_reply = response
+            ref_urls = api_response.get("refUrl", [])  # refUrl 필드 추가
+            
+            st.session_state["messages"].append({
+                "role": "assistant", 
+                "content": bot_reply,
+                "refUrl": ref_urls  # refUrl을 메시지에 포함
+            })
+            
+            # 상태 업데이트
+            st.session_state["last_guardrail"] = api_response.get("guardrail_result", "")
+            st.session_state["last_intent"] = api_response.get("intent", "")
+            st.session_state["last_sentiment"] = api_response.get("sentiment", "NEUTRAL")
+            
+            # 로딩 상태 및 API 처리 플래그 해제
+            st.session_state["is_loading"] = False
+            st.session_state["api_processing"] = False
+            
+            # 자동 스크롤을 위한 JavaScript 추가
+            st.markdown(
+                """
+                <script>
+                setTimeout(function() {
+                    var messagesContainer = document.getElementById('messages-container');
+                    if (messagesContainer) {
+                        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    } else {
+                        window.scrollTo({
+                            top: document.body.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 100);
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            # 봇 응답 완료 후 화면 업데이트
+            st.rerun()
     
     # 이제 API 호출이 사용자 입력 시 즉시 처리되므로 이 블록은 불필요
 
