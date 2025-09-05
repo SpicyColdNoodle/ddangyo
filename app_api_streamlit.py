@@ -582,9 +582,9 @@ def render_header_buttons() -> None:
         """
         <div class="button-bar-wrapper">
           <div class="button-bar">
-            <a class="button-pill" href="#" onclick="return false;">자주묻는 질문</a>
-            <a class="button-pill" href="#" onclick="return false;">상담원 연결</a>
-            <a class="button-pill" href="#" onclick="return false;">주문조회</a>
+            <a class="button-pill" href="https://www.ddangyo.com" target="_blank" rel="noopener noreferrer">자주묻는 질문</a>
+            <a class="button-pill" href="https://www.ddangyo.com" target="_blank" rel="noopener noreferrer">상담원 연결</a>
+            <a class="button-pill" href="https://www.ddangyo.com" target="_blank" rel="noopener noreferrer">주문조회</a>
           </div>
         </div>
         """,
